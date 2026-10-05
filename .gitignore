@@ -1,0 +1,17 @@
+node_modules/
+frontend/dist/
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+.env
+# runtime data: never committed
+uploads/*
+outputs/*
+temp/*
+models/*
+!uploads/.gitkeep
+!outputs/.gitkeep
+!temp/.gitkeep
+!models/.gitkeep

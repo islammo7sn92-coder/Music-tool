@@ -1,0 +1,13 @@
+fastapi>=0.115
+uvicorn[standard]>=0.30
+python-multipart>=0.0.9
+aiofiles>=23.2
+
+# --- AI source separation (Demucs) ---
+# Demucs 4.0.1 saves audio through torchaudio; torchaudio >= 2.9 dropped that
+# code path, so keep torch/torchaudio below 2.9.
+torch>=2.1,<2.9
+torchaudio>=2.1,<2.9
+demucs==4.0.1
+soundfile>=0.12
+numpy<2.4

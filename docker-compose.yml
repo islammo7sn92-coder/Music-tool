@@ -1,0 +1,14 @@
+services:
+  app:
+    build: .
+    ports: ["8000:8000"]
+    environment:
+      MAX_UPLOAD_MB: 500
+      RETENTION_MINUTES: 30
+      DEMUCS_MODEL: htdemucs
+    volumes:
+      - models:/app/models   # keep the downloaded weights between rebuilds
+    restart: unless-stopped
+
+volumes:
+  models:
