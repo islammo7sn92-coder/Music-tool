@@ -9,6 +9,11 @@ import ResultView from './components/ResultView.jsx';
 
 const DEFAULT_CFG = { max_upload_mb: 500, max_duration_min: 60, retention_minutes: 30 };
 const MAX_POLL_FAILURES = 8;
+const JOB_KEY = 'activeJob';
+
+const saveJob = (v) => { try { localStorage.setItem(JOB_KEY, JSON.stringify(v)); } catch { /* private mode */ } };
+const clearJob = () => { try { localStorage.removeItem(JOB_KEY); } catch { /* private mode */ } };
+const loadJob = () => { try { return JSON.parse(localStorage.getItem(JOB_KEY)); } catch { return null; } };
 
 export default function App() {
   const [lang, setLang] = useState(() => {
@@ -43,7 +48,7 @@ export default function App() {
 
   useEffect(() => { getConfig().then(setCfg).catch(() => {}); }, []);
 
-  const video = file ? isVideoFile(file) : false;
+  const video = file instanceof File ? isVideoFile(file) : false;
 
   const onFile = useCallback(async (f) => {
     setErrCode(null);
@@ -59,7 +64,9 @@ export default function App() {
   };
   const releaseWake = () => { try { wakeLock.current?.release(); } catch { /* noop */ } wakeLock.current = null; };
 
-  const fail = (code) => { releaseWake(); setErrCode(code); setPhase('error'); };
+  const fail = (code) => {
+    setFile((f) => (f instanceof File ? f : null)); // a resumed job has no real File to retry with
+    releaseWake(); setErrCode(code); setPhase('error'); };
 
   const start = async () => {
     if (!file || !mode) return;
@@ -76,33 +83,57 @@ export default function App() {
     try { id = await up.promise; } catch (e) { return me.cancelled ? undefined : fail(e.code || 'internal'); }
     me.id = id;
     if (me.cancelled) return deleteJob(id);
+    saveJob({ id, name: file.name });
+    track(id, me);
+  };
 
+  // Poll a job until it finishes. Also used to resume a job after the page was closed/reloaded.
+  const track = async (id, me) => {
     let failures = 0;
     while (!me.cancelled) {
       try {
         const j = await getJob(id);
         failures = 0;
-        if (j.status === 'error') return fail(j.error || 'internal');
+        if (j.status === 'error') { clearJob(); return fail(j.error || 'internal'); }
         if (j.status === 'done') { releaseWake(); setResult(j); setPhase('done'); return; }
         setStage(j.stage); setPercent(j.progress); setQueuePos(j.queue_position);
       } catch (e) {
-        if (e.code === 'expired' || ++failures >= MAX_POLL_FAILURES) return fail(e.code || 'network');
+        if (e.code === 'expired') { clearJob(); return fail('expired'); }
+        if (++failures >= MAX_POLL_FAILURES) return fail(e.code || 'network');
       }
       await new Promise((r) => setTimeout(r, 1000));
     }
   };
+
+  // On load: resume an unfinished job (or show a finished one that has not expired yet).
+  useEffect(() => {
+    const saved = loadJob();
+    if (!saved?.id) return;
+    getJob(saved.id).then((j) => {
+      if (j.status === 'error') return clearJob();
+      run.current = { id: saved.id, abort: null, cancelled: false };
+      setFile({ name: saved.name || '', size: 0 });
+      if (j.status === 'done') { setResult(j); setPhase('done'); return; }
+      setPhase('working'); setStage(j.stage); setPercent(j.progress); setQueuePos(j.queue_position);
+      acquireWake();
+      track(saved.id, run.current);
+    }).catch((e) => { if (e.code === 'expired') clearJob(); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const cancel = () => {
     const me = run.current;
     me.cancelled = true;
     me.abort?.();
     if (me.id) deleteJob(me.id);
+    clearJob();
     releaseWake();
     setPhase('idle');
   };
 
   const reset = () => {
     if (run.current.id) deleteJob(run.current.id);
+    clearJob();
     run.current = { id: null, abort: null, cancelled: false };
     setFile(null); setDuration(null); setMode(null); setKeepVideo(false);
     setResult(null); setErrCode(null); setPhase('idle');
