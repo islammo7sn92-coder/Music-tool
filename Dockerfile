@@ -20,4 +20,5 @@ ENV MODELS_DIR=/app/models UPLOADS_DIR=/app/uploads OUTPUTS_DIR=/app/outputs TEM
 RUN python backend/scripts/download_model.py
 EXPOSE 8000
 WORKDIR /app/backend
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Hosting platforms (Render, Railway, ...) inject $PORT
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

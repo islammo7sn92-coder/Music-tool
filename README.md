@@ -152,3 +152,11 @@ server {
 | `DELETE /api/jobs/{id}` | إلغاء/حذف فوري |
 
 أكواد الأخطاء: `unsupported, too_large, too_long, corrupt, extract_failed, separation_failed, ffmpeg_failed, disk_full, timeout, internal`.
+
+## النشر من الموبايل (بدون كمبيوتر) — Render
+
+1. على render.com أنشئ حساباً واربطه بحساب GitHub.
+2. **New + ← Blueprint** ← اختر المستودع `music-tool` ← **Apply** (يقرأ `render.yaml` تلقائياً).
+3. انتظر البناء (≈10 دقائق، لأنه ينزّل torch والنموذج)، ثم افتح الرابط `https://….onrender.com` من Safari.
+
+الخطة `standard` (2GB RAM) هي الأدنى الذي يتحمّل Demucs. التكلفة بالساعة، فيمكنك تجربتها ثم **Suspend/Delete** من لوحة Render. الخطط المجانية (512MB) لا تكفي.

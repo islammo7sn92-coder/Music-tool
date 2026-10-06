@@ -1,0 +1,16 @@
+# One-click deploy on Render (https://render.com): New + > Blueprint > pick this repo.
+# Demucs needs RAM: the 2 GB "standard" plan is the smallest that works reliably.
+services:
+  - type: web
+    name: vocal-separator
+    runtime: docker
+    branch: claude/audio-vocal-music-separator-qjpxbc
+    plan: standard
+    healthCheckPath: /api/health
+    envVars:
+      - key: MAX_UPLOAD_MB
+        value: "200"
+      - key: RETENTION_MINUTES
+        value: "30"
+      - key: DEMUCS_SEGMENT
+        value: "7"        # lower RAM use
